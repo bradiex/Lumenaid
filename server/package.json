@@ -1,0 +1,28 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "canny-edge-detector": "^1.0.0",
+    "canvas": "^1.6.9",
+    "express": "^4.16.2",
+    "google-auth-library": "^1.0.0",
+    "googleapis": "^24.0.0",
+    "html-to-text": "^3.3.0",
+    "image-js": "^0.15.0",
+    "imagejs": "0.0.9",
+    "mongoose": "^5.0.0-rc0",
+    "nodemailer": "^4.4.1",
+    "request": "^2.83.0",
+    "socketio": "^1.0.0",
+    "stellar-sdk": "^0.8.0",
+    "uuid": "^3.1.0"
+  }
+}
