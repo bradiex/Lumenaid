@@ -1,3 +1,4 @@
+const templates = require('./templates')
 
 const transporter = require('nodemailer').createTransport({
   service: 'gmail',
@@ -23,5 +24,6 @@ function send (options) {
 }
 
 module.exports = {
-  send: send
+  send: send,
+  templates: templates
 }

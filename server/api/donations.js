@@ -2,31 +2,9 @@ const express = require('express')
 const router = express.Router()
 const uuid4 = require('uuid/v4')
 
-const stellar = require('./stellar')()
+const stellar = require('../stellar')()
 
-const mongoose = require('mongoose')
-
-const donationSchema = mongoose.Schema({
-  roundId: { type: String, default: '' },
-  timestamp: { type: Date, default: Date.now },
-  amount: { type: Number, default: 0 },
-  message: { type: String, default: '' },
-  vote: { type: String, default: null },
-  memoId: { type: String, default: null },
-  display: { type: Object, default: { pos: { x: 0, y: 0 }, size: 0, color: 0 } },
-  account: { type: String, default: null }
-})
-donationSchema.methods.updateDisplay = function () {
-  this.display = {
-    pos: {
-      x: 0.01 + Math.random() * 0.98,
-      y: 0.01 + Math.random() * 0.98
-    },
-    size: 1 + Math.log(this.amount) / Math.log(20),
-    color: Math.pow(Math.sin(Math.PI * Math.random()), 2)
-  }
-}
-const Donation = mongoose.model('donations', donationSchema)
+import { Donation } from './models'
 
 router.get('/', (req, res, next) => {
   Donation.find({ account: { $ne: null } })
@@ -201,6 +179,5 @@ router.post('/test', (req, res, next) => {
 })
 
 module.exports = {
-  router: router,
-  Donation: Donation
+  router: router
 }

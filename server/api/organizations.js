@@ -1,22 +1,9 @@
 const express = require('express')
 const router = express.Router()
 
-const mongoose = require('mongoose')
+const ActionCreate = require('./actions/index').ActionCreate
 
-const ActionCreate = require('./actions').ActionCreate
-
-const organizationSchema = mongoose.Schema({
-  name: { type: String, default: '' },
-  description: { type: String, default: '' },
-  link: { type: String, default: '' },
-  image: { type: String, default: '' },
-  email: { type: String, default: '' },
-  validated: { type: Boolean, default: false },
-  authorized: { type: Boolean, default: false },
-  account: { type: String, default: '' },
-  rounds: Array
-})
-const Organization = mongoose.model('organizations', organizationSchema)
+import { Organization } from './models'
 
 router.get('/', (req, res, next) => {
   Organization.find({ validated: true })
@@ -48,6 +35,5 @@ router.post('/', (req, res, next) => {
 
 
 module.exports = {
-  router: router,
-  Organization: Organization
+  router: router
 }

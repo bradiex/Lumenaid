@@ -3,24 +3,7 @@ const router = express.Router()
 const uuid4 = require('uuid/v4')
 
 
-const mongoose = require('mongoose')
-
-const Organization = require('./organizations').Organization
-
-const roundSchema = mongoose.Schema({
-  organizationId: { type: mongoose.Schema.Types.ObjectId, default: null },
-  description: { type: String, default: null },
-  start: { type: Date, default: Date.now },
-  stop: { type: Date, default: null },
-  duration: { type: Number, default: 7 },
-  amount: { type: Number, default: 0 },
-  donationCount: { type: Number, default: 0 }
-})
-roundSchema.pre('save', next => {
-  // next(new Error('Already active!'))
-  next()
-})
-const Round = mongoose.model('rounds', roundSchema)
+import { Round, Organization } from './models'
 
 /*
 r = new Round({ organizationId: '5a48eb0c38eccb282c9824ef' })
@@ -41,19 +24,23 @@ function getActiveRound () {
       .select({ organizationId: 1, description: 1, start: 1, stop: 1, duration: 1, amount: 1, donationCount: 1 })
       .then(
         round => {
-          Organization.findOne({ _id: round.organizationId })
-            .select({ name: 1, description: 1, link: 1, image: 1 })
-            .then(
-              organization => {
-                round = JSON.parse(JSON.stringify(round))
-                round.organization = organization
-                resolve(round)
-              },
-              error => {
-                console.error(error.message)
-                reject(new Error('Could not fetch organization of active round'))
-              }
-            )
+          if (round) {
+            Organization.findOne({ _id: round.organizationId })
+              .select({ name: 1, description: 1, link: 1, image: 1 })
+              .then(
+                organization => {
+                  round = JSON.parse(JSON.stringify(round))
+                  round.organization = organization
+                  resolve(round)
+                },
+                error => {
+                  console.error(error.message)
+                  reject(new Error('Could not fetch organization of active round'))
+                }
+              )
+          } else {
+            resolve(null)
+          }
         },
         error => {
           console.error(error.message)

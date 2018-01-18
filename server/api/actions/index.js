@@ -1,128 +1,10 @@
-const express = require('express')
-const router = express.Router()
-const uuid4 = require('uuid/v4')
 
-const mongoose = require('mongoose')
+const mailer = require('../../mailer')
+const templates = mailer.templates
 
-const mailer = require('./mailer')
-const MailTemplates = require('./mail_templates')
+const getActiveRound = require('../rounds').getActiveRound
 
-const actionSchema = mongoose.Schema({
-  type: {
-    type: String,
-    enum: [
-      'error',
-      'validate_email',
-      'authorize_organization',
-      'start_round',
-      'update_organization',
-      'verify_update_organization',
-      'stop_round',
-      'post_round_init',
-      'post_round_review',
-      'post_round_send',
-      'post_round_check'
-    ]
-  },
-  key: { type: String, default: uuid4 },
-  timestamp: { type: Date, default: Date.now },
-  done: { type: Boolean, default: false },
-  data: { type: Object, default: null },
-  status: {
-    type: String,
-    enum: [ 'pending', 'accepted', 'rejected', 'ignored' ],
-    default: 'pending'
-  },
-  comments: { type: Object, default: null }
-})
-actionSchema.methods.getLink = function () {
-  return process.env.NODE_ENV === 'production'
-    ? `https://www.lumenaid.org/actions/${this.key}`
-    : `http://localhost:8000/actions/${this.key}`
-}
-const Action = mongoose.model('actions', actionSchema)
-
-router.get('/', (req, res, next) => {
-  Action.find()
-    .select({ type: 1, timestamp: 1, data: 1, status: 1, comments: 1 })
-    .sort({ timestamp: -1 })
-    .then(
-      actions => {
-        res.send({ actions: actions })
-      },
-      error => {
-        console.error(error.message)
-        next(new Error('Could not get action'))
-      }
-    )
-})
-
-router.get('/:actionId', (req, res, next) => {
-  Action.findOne({
-      key: req.params.actionId,
-      $or: [ { done: 0 }, { status: 'ignored' } ]
-    })
-    .select({ type: 1, key: 1, timestamp: 1, data: 1, status: 1 })
-    .then(
-      action => {
-        if (!action) {
-          let error = new Error('Action not found')
-          error.status = 404
-          next(error)
-        } else {
-          res.send({ action: action })
-        }
-      },
-      error => {
-        console.error(error.message)
-        next(new Error('Could not get action'))
-      }
-    )
-})
-
-router.patch('/:actionId', (req, res, next) => {
-  let status = req.body.status
-  let fields = req.body.fields
-  let comments = req.body.comments
-  Action.findOne({
-      key: req.params.actionId,
-      $or: [ { done: 0 }, { status: 'ignored' } ]
-    })
-    .select({ roundId: 1, type: 1, data: 1, status: 1, done: 1 })
-    .then(
-      action => {
-        if (!action) {
-          let error = new Error('Action not found')
-          error.status = 404
-          next(error)
-        } else {
-          action.status = status
-          action.done = true
-          ActionHandler.handle(action, fields).then(
-            action => {
-              action.save().then(
-                action => {
-                  res.send({ id: action._id })
-                },
-                error => {
-                  console.log(error.message)
-                  next(new Error('Could not save action'))
-                }
-              )
-            },
-            error => {
-              console.log(error.message)
-              next(new Error('Could not handle action'))
-            }
-          )
-        }
-      },
-      error => {
-        console.error(error.message)
-        next(new Error('Could not get action'))
-      }
-    )
-})
+import { Organization, Action } from '../models'
 
 function sendMail (action, receiver) {
   const defaultReceiver = '***'
@@ -131,8 +13,8 @@ function sendMail (action, receiver) {
     html: `${action.getLink()}`,
     text: ''
   }
-  if (typeof(MailTemplates[action.type]) === 'function') {
-    mailBody = MailTemplates[action.type](action)
+  if (typeof(templates[action.type]) === 'function') {
+    mailBody = templates[action.type](action)
   } else {
     console.log(action.type, 'has no function')
   }
@@ -172,6 +54,7 @@ const ActionCreate = {
       }
     )
   },
+
   validateEmail (organization) {
     console.log('--VALIDATE EMAIL ACTION--')
     let action = new Action({ type: 'validate_email' })
@@ -190,6 +73,7 @@ const ActionCreate = {
       }
     )
   },
+
   authorizeOrganization (organization) {
     console.log('--AUTHORIZE ORGANIZATION ACTION--')
     let action = new Action({ type: 'authorize_organization' })
@@ -205,15 +89,69 @@ const ActionCreate = {
         this.error(action, `Could not save authorize_organization action: ${error.message}`)
       }
     )
+  },
+
+  startRound (force) {
+    console.log('--START ROUND ACTION--')
+    return new Promise((resolve, reject) => {
+      if (force) {
+        this.stopRound().then(
+          result => {
+            start()
+          },
+          error => {
+            reject(new Error(`Unable to stop round: ${error.message}`))
+          }
+        )
+      } else {
+        getActiveRound().then(
+          round => {
+            if (round) {
+              reject(new Error(`Round already running: ${round._id}`))
+            } else {
+              start()
+            }
+          },
+          error => {
+            reject(new Error(`Unable to check active round: ${error.message}`))
+          }
+        )
+      }
+
+      function start() {
+        console.log('Pre-checks succeeded.. starting new round..')
+        resolve()
+      }
+    })
+  },
+
+  stopRound () {
+    console.log('--STOP ROUND ACTION--')
+    return new Promise((resolve, reject) => {
+      getActiveRound().then(
+        round => {
+          if (round) {
+            stop()
+          } else {
+            resolve()
+          }
+        },
+        error => {
+          console.log('ACTIVE ROUND??', error)
+          console.error(error.message)
+          this.error(error.message)
+          reject(error)
+        }
+      )
+
+      function stop () {
+        console.log('Pre-checks succeeded.. stopping round..')
+        resolve()
+      }
+    })
   }
 }
 
-module.exports = {
-  router: router,
-  ActionCreate: ActionCreate
-}
-
-const Organization = require('./organizations').Organization
 
 /* Handle action responses */
 const ActionHandler = {
@@ -332,4 +270,10 @@ const ActionHandler = {
       )
     })
   }
+}
+
+
+module.exports = {
+  ActionCreate: ActionCreate,
+  ActionHandler: ActionHandler
 }

@@ -29,7 +29,7 @@ module.exports = io_ => {
   }
 }
 
-const Donation = require('./donations').Donation
+import { Donation } from './api/models'
 
 function createTestAccount (cb) {
   let pair = StellarSdk.Keypair.random()

@@ -4,7 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js --exec babel-node --presets es2015,stage-2",
+    "build": "babel . -d dist --presets es2015,stage-2",
+    "server": "node dist/index.js",
+    "start-round": "babel-node control.js start-round --presets es2015,stage-2",
+    "start-round-force": "babel-node control.js start-round force --presets es2015,stage-2",
+    "stop-round": "babel-node control.js stop-round --presets es2015,stage-2"
   },
   "author": "",
   "license": "ISC",
@@ -24,5 +30,10 @@
     "socketio": "^1.0.0",
     "stellar-sdk": "^0.8.0",
     "uuid": "^3.1.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-stage-2": "^6.24.1"
   }
 }

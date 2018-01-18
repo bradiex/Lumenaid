@@ -5,11 +5,11 @@ const databaseUrl = 'mongodb://localhost/stellar'
 const mongoose = require('mongoose')
 mongoose.connect(databaseUrl)
 
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
+let db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'))
 db.once('open', function() {
   console.log(`Connected to ${databaseUrl}`)
-});
+})
 
 router.use('/actions', require('./actions').router)
 router.use('/organizations', require('./organizations').router)
