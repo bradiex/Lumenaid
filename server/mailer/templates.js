@@ -72,6 +72,15 @@ const MailTemplates = {
       `
     }
     return this.main(subject, content)
+  },
+
+  start_round (action) {
+    let subject = `Lumenaid: New round started`
+    let content = `
+      New round started for <b>${action.data.round.organization.name}</b>.<br>
+      Votes: ${action.data.votes}
+    `
+    return this.main(subject, content)
   }
 }
 

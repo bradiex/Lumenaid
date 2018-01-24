@@ -75,29 +75,6 @@ router.get('/votes', (req, res, next) => {
   )
 })
 
-router.get('/test', (req, res, next) => {
-  Donation.aggregate([
-    {
-      $project: {
-        a: [1, 2, 3],
-        x: '1',
-        y: 2,
-        tt: '$test',
-        ttt: { $sum: 1 },
-        count: { $sum: ['$amount', '$x'] },
-        sum: { $sum: ['$x', '$y'] }
-      }
-    }
-  ]).then(
-    result => {
-      res.send(result)
-    },
-    error => {
-      next(error)
-    }
-  )
-})
-
 router.get('/stats', (req, res, next) => {
   Promise.all([
     Donation.count({ account: { $ne: null } }),

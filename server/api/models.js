@@ -87,14 +87,94 @@ const Organization = mongoose.model('organizations', organizationSchema)
 /* Rounds */
 
 const roundSchema = mongoose.Schema({
-  organizationId: { type: mongoose.Schema.Types.ObjectId, default: null },
+  organization: { type: mongoose.Schema.Types.ObjectId, ref: 'organizations', default: null },
   description: { type: String, default: null },
   start: { type: Date, default: Date.now },
   stop: { type: Date, default: null },
-  duration: { type: Number, default: 7 },
-  amount: { type: Number, default: 0 },
-  donationCount: { type: Number, default: 0 }
+  statistics: { type: Object, default: null }
 })
+
+roundSchema.methods.updateStatistics = function () {
+  let roundId = 'currentroundid' // testing
+  return new Promise((resolve, reject) => {
+    Promise.all([
+      // donation count
+      Donation.count({ account: { $ne: null }, roundId: roundId }),
+
+      // donation amount
+      Donation.aggregate([
+        {
+          $match: {
+            account: { $ne: null },
+            roundId: roundId
+          }
+        },
+        {
+          $group: {
+            _id: '$roundId',
+            sum: { $sum: '$amount' }
+          }
+        }
+      ]),
+
+      // votes
+      Donation.aggregate([
+        {
+          // filter out valid votes
+          $match: {
+            account: { $ne: null },
+            roundId: roundId,
+            $and: [ { vote: { $ne: null } }, { vote: { $ne: '' } } ]
+          }
+        },
+        {
+          // sort by timestamp to retrieve last
+          $sort: {
+            timestamp: 1
+          }
+        },
+        {
+          // get last vote per account
+          $group: {
+            _id: '$account',
+            vote: { $last: '$vote' }
+          }
+        },
+        {
+          // get votes
+          $group: {
+            _id: '$vote',
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { count: -1 } },
+        { $limit: 5 },
+        {
+          $project: {
+            _id: 0,
+            organizationId: '$_id',
+            count: '$count'
+          }
+        }
+      ])
+    ]).then(
+      result => {
+        let [ donationCount, donationAmount, votes ] = result
+        donationAmount = donationAmount[0].sum
+        this.statistics = {
+          donationCount,
+          donationAmount,
+          votes
+        }
+        resolve(this)
+      },
+      error => {
+        console.error(error.message)
+        reject(new Error('Could not calculate statistics'))
+      }
+    )
+  })
+}
 
 const Round = mongoose.model('rounds', roundSchema)
 

@@ -20,24 +20,12 @@ r.save().then(
 
 function getActiveRound () {
   return new Promise((resolve, reject) => {
-    Round.findOne({ stop: null })
+    Round.findOne().sort({ start: -1 }).populate('organization', 'name description link image')
       .select({ organizationId: 1, description: 1, start: 1, stop: 1, duration: 1, amount: 1, donationCount: 1 })
       .then(
         round => {
-          if (round) {
-            Organization.findOne({ _id: round.organizationId })
-              .select({ name: 1, description: 1, link: 1, image: 1 })
-              .then(
-                organization => {
-                  round = JSON.parse(JSON.stringify(round))
-                  round.organization = organization
-                  resolve(round)
-                },
-                error => {
-                  console.error(error.message)
-                  reject(new Error('Could not fetch organization of active round'))
-                }
-              )
+          if (round && !round.stop) {
+            resolve(round)
           } else {
             resolve(null)
           }

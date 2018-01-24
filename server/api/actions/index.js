@@ -4,7 +4,7 @@ const templates = mailer.templates
 
 const getActiveRound = require('../rounds').getActiveRound
 
-import { Organization, Action } from '../models'
+import { Organization, Action, Round } from '../models'
 
 function sendMail (action, receiver) {
   const defaultReceiver = '***'
@@ -25,7 +25,7 @@ function sendMail (action, receiver) {
     text: mailBody.plain
   }).then(
     info => {
-      console.log('mail sent', info)
+      console.log('mail sent')
     },
     error => {
       console.log(error.message)
@@ -94,10 +94,11 @@ const ActionCreate = {
   startRound (force) {
     console.log('--START ROUND ACTION--')
     return new Promise((resolve, reject) => {
+      let action = new Action({ type: 'start_round', status: 'accepted', done: true })
       if (force) {
         this.stopRound().then(
-          result => {
-            start()
+          round => {
+            start(round)
           },
           error => {
             reject(new Error(`Unable to stop round: ${error.message}`))
@@ -109,7 +110,12 @@ const ActionCreate = {
             if (round) {
               reject(new Error(`Round already running: ${round._id}`))
             } else {
-              start()
+              // Get last round
+              Round.findOne().sort({ start: -1 }).then(
+                round => {
+                  start(round)
+                }
+              )
             }
           },
           error => {
@@ -118,9 +124,66 @@ const ActionCreate = {
         )
       }
 
-      function start() {
+      function start(lastRound) {
         console.log('Pre-checks succeeded.. starting new round..')
-        resolve()
+        // get last round statistics
+        // if no votes, pick random
+        let round = new Round()
+        if (lastRound && lastRound.statistics.votes.length) {
+          // check votes
+          console.log('Picking organization based on votes')
+          let organizationId = lastRound.statistics.votes[0].organizationId
+          round.organization = organizationId
+          save()
+        } else {
+          // random
+          console.log('No votes available, picking random organization...')
+          Organization.aggregate([
+            { $match: { authorized: true } },
+            { $sample: { size: 1 } }
+          ]).then(
+            organization => {
+              organization = organization[0]
+              if (organization) {
+                round.organization = organization._id
+                save()
+              } else {
+                this.error(action, 'No organization available for next round')
+              }
+            }
+          )
+        }
+
+        // check votes
+        function save () {
+          Organization.findOne({ _id: round.organization })
+            .select({ name: 1, description: 1, link: 1, image: 1 })
+            .then(
+              organization => {
+                action.data = {
+                  round: JSON.parse(JSON.stringify(round)),
+                  votes: JSON.stringify(lastRound.statistics.votes)
+                }
+                action.data.round.organization = organization
+                // Save
+                Promise.all([
+                  round.save(),
+                  action.save()
+                ]).then(
+                  result => {
+                    console.log(`Successfully started round ${round.id}`)
+                    sendMail(action)
+                    resolve(round)
+                  },
+                  error => {
+                    console.error(error.message)
+                    this.error(action, error.message)
+                    reject(error)
+                  }
+                )
+              }
+            )
+        }
       }
     })
   },
@@ -128,25 +191,54 @@ const ActionCreate = {
   stopRound () {
     console.log('--STOP ROUND ACTION--')
     return new Promise((resolve, reject) => {
+      let action = new Action({ type: 'stop_round', status: 'accepted', done: true })
       getActiveRound().then(
         round => {
           if (round) {
-            stop()
+            stop(round)
           } else {
-            resolve()
+            console.log('No active round')
+            resolve(null)
           }
         },
         error => {
-          console.log('ACTIVE ROUND??', error)
           console.error(error.message)
-          this.error(error.message)
+          this.error(action, error.message)
           reject(error)
         }
       )
 
-      function stop () {
+      function stop (round) {
         console.log('Pre-checks succeeded.. stopping round..')
-        resolve()
+        // Fetch results
+        round.stop = Date.now()
+        round.updateStatistics().then(
+          round => {
+            action.data = {
+              round: JSON.parse(JSON.stringify(round))
+            }
+            // Save
+            Promise.all([
+              round.save(),
+              action.save()
+            ]).then(
+              result => {
+                console.log(`Successfully stopped round ${round.id}`)
+                resolve(round)
+              },
+              error => {
+                console.error(error.message)
+                this.error(action, error.message)
+                reject(error)
+              }
+            )
+          },
+          error => {
+            console.error(error.message)
+            this.error(action, error.message)
+            reject(error)
+          }
+        )
       }
     })
   }
