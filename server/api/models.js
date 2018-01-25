@@ -15,10 +15,10 @@ const actionSchema = mongoose.Schema({
     'update_organization',
     'verify_update_organization',
     'stop_round',
-    'post_round_init',
+    'post_round_check',
     'post_round_review',
     'post_round_send',
-    'post_round_check'
+    'post_round_final'
     ]
   },
   key: { type: String, default: uuid4 },
@@ -89,6 +89,7 @@ const Organization = mongoose.model('organizations', organizationSchema)
 const roundSchema = mongoose.Schema({
   organization: { type: mongoose.Schema.Types.ObjectId, ref: 'organizations', default: null },
   description: { type: String, default: null },
+  image: { type: String, default: null },
   start: { type: Date, default: Date.now },
   stop: { type: Date, default: null },
   statistics: { type: Object, default: null }

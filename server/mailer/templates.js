@@ -81,7 +81,56 @@ const MailTemplates = {
       Votes: ${action.data.votes}
     `
     return this.main(subject, content)
-  }
+  },
+
+  update_organization (action) {
+    let subject = ''
+    let content = ''
+    if (action.data.newRound) {
+      subject = `Lumenaid: Your organization has been chosen for the next round!`
+      content = `
+        Congratulations, your organization <b>${action.data.organization.name}</b> has been chosen for the next round!<br>
+        Please update your organization's description and give some more detail about the current work of your organization using the following link:<br>
+        ${action.getLink()}
+      `
+    } else {
+      subject = `Lumenaid: Request for changing organization info`
+      content = `
+        Please use following link to update your organization <b>${action.data.organization.name}</b> details:<br>
+        ${action.getLink()}
+      `
+    }
+    return this.main(subject, content)
+  },
+
+  verify_update_organization (action) {
+    let subject = ''
+    let content = ''
+    if (action.done) {
+      // Mail to organization
+      if (action.status === 'accepted') {
+        subject = `Lumenaid: Organization update approved for ${action.data.organization.name}`
+        content = `
+          Your updates to your organization info have been approved.<br>
+          ${action.comments}
+        `
+      } else if (action.status === 'rejected') {
+        subject = `Lumenaid: Organization update rejected for ${action.data.organization.name}`
+        content = `
+          Your updates to organization info have been rejected for the following reason:<br>
+          ${action.comments}
+        `
+      }
+    } else {
+      // Mail to lumenaid
+      subject = `Lumenaid: Verify organization update for ${action.data.organization.name}`
+      content = `
+      Verify organization update for <b>${action.data.organization.name}</b>${action.data.newRound ? ' NEW ROUND' : ''}:<br>
+      ${action.getLink()}
+      `
+    }
+    return this.main(subject, content)
+  },
 }
 
 module.exports = MailTemplates

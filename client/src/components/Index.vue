@@ -2,8 +2,8 @@
   <!-- Configure "view" prop for QLayout -->
   <q-layout>
 
-    <div id="container" class="row">
-      <div id="control" class="col-3 text-grey-1" style="background: rgb(33, 37, 39);">
+    <div id="container" class="row no-wrap">
+      <div id="control" class="col-3 text-grey-1" style="background: rgb(51, 51, 60);">
 
         <div v-if="round" style="padding: 10px;">
           <h5><i>Shine some light on...</i></h5>
@@ -270,7 +270,7 @@ export default {
   },
 
   mounted () {
-    // this.$refs.splash.open()
+    this.$refs.splash.open()
   },
 
   sockets: {

@@ -103,6 +103,60 @@
 
           </template>
 
+          <template v-if="action.type === 'update_organization' || action.type === 'verify_update_organization'">
+
+            <h5>Organization</h5>
+
+            <q-field label="Name">
+              <q-input v-model="action.data.organization.name" disable/>
+            </q-field>
+
+            <q-field label="Description">
+              <q-input v-model="action.data.organization.description"/>
+              <p class="caption" v-html="action.data.organization.description"></p>
+            </q-field>
+
+            <q-field label="Image">
+              <q-input v-model="action.data.organization.image"/>
+              <img :src="action.data.organization.image" style="width: 50%;"/>
+            </q-field>
+
+            <q-field label="Link">
+              <q-input v-model="action.data.organization.link"/>
+            </q-field>
+
+            <q-field label="Email">
+              <q-input v-model="action.data.organization.email" disable/>
+            </q-field>
+
+            <q-field label="Account">
+              <q-input v-model="action.data.organization.account"/>
+            </q-field>
+
+            <template v-if="action.data.round">
+              <h5>Round Info</h5>
+
+              <q-field label="Description">
+                <q-input v-model="action.data.round.description"/>
+                <p class="caption" v-html="action.data.round.description"></p>
+              </q-field>
+
+              <q-field label="Image">
+                <q-input v-model="action.data.round.image"/>
+                <img :src="action.data.round.image" style="width: 50%;"/>
+              </q-field>
+            </template>
+
+            <p class="caption" v-if="action.data.comments">
+              Feedback: {{ action.data.comments }}
+            </p>
+
+            <q-field label="Feedback" :helper="action.type === 'update_organization' ? 'Provide any additional requests here' : ''">
+              <q-input v-model="action.comments"/>
+            </q-field>
+
+          </template>
+
         </q-card-main>
         <q-card-actions v-if="action.status === 'pending' || action.status === 'ignored'">
           <q-btn flat color="positive" icon="done" @click="updateAction('accepted')">Accept</q-btn>
@@ -154,6 +208,8 @@ export default {
           return 'Email Validation'
         case 'authorize_organization':
           return 'Organization Authorization'
+        case 'update_organization':
+          return 'Organization Info Update'
         default:
           return ''
       }
@@ -164,7 +220,7 @@ export default {
     updateAction (type) {
       Action.update(this.action.key, {
         status: type,
-        fields: this.action
+        fields: { ...this.action.data, comments: this.action.comments }
       }).then(
         response => {
           this.action.status = type
