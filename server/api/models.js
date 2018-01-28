@@ -17,8 +17,7 @@ const actionSchema = mongoose.Schema({
     'stop_round',
     'post_round_check',
     'post_round_review',
-    'post_round_send',
-    'post_round_final'
+    'post_round_send'
     ]
   },
   key: { type: String, default: uuid4 },
@@ -92,7 +91,9 @@ const roundSchema = mongoose.Schema({
   image: { type: String, default: null },
   start: { type: Date, default: Date.now },
   stop: { type: Date, default: null },
-  statistics: { type: Object, default: null }
+  statistics: { type: Object, default: null },
+  payout: { type: Number, default: 0 },
+  recycle: { type: Boolean, default: false }
 })
 
 roundSchema.methods.updateStatistics = function () {

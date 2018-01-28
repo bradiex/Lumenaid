@@ -8,6 +8,7 @@ import { Organization, Action, Round } from '../models'
 
 function sendMail (action, receiver) {
   const defaultReceiver = '***'
+  receiver = receiver || defaultReceiver
   let mailBody = {
     subject: `Lumenaid: Request for action ${action.type}`,
     html: `${action.getLink()}`,
@@ -19,13 +20,13 @@ function sendMail (action, receiver) {
     console.log(action.type, 'has no function')
   }
   mailer.send({
-    to: receiver || defaultReceiver,
+    to: receiver,
     subject: mailBody.subject,
     html: mailBody.html,
     text: mailBody.plain
   }).then(
     info => {
-      console.log('mail sent')
+      console.log('mail sent to', receiver)
     },
     error => {
       console.log(error.message)
@@ -157,7 +158,7 @@ const ActionCreate = {
         // check votes
         function save () {
           Organization.findOne({ _id: round.organization })
-            .select({ name: 1, description: 1, link: 1, image: 1 })
+            .select({ name: 1, description: 1, link: 1, image: 1, email: 1 })
             .then(
               organization => {
                 action.data = {
@@ -228,7 +229,16 @@ const ActionCreate = {
             ]).then(
               result => {
                 console.log(`Successfully stopped round ${round.id}`)
-                resolve(round)
+                this.postRoundCheck(round).then(
+                  result => {
+                    resolve(round)
+                  },
+                  error => {
+                    console.error(error.message)
+                    this.error(action, error.message)
+                    reject(error)
+                  }
+                )
               },
               error => {
                 console.error(error.message)
@@ -244,6 +254,105 @@ const ActionCreate = {
           }
         )
       }
+    })
+  },
+
+  postRoundCheck (round) {
+    console.log('--POST ROUND CHECK ACTION--')
+    return new Promise((resolve, reject) => {
+      let action = new Action({ type: 'post_round_check' })
+      Organization.findOne({ _id: round.organization })
+        .then(
+          organization => {
+            action.data = {
+              round: JSON.parse(JSON.stringify(round))
+            }
+            action.data.round.organization = organization
+            action.save().then(
+              action => {
+                sendMail(action)
+                resolve(action)
+              },
+              error => {
+                console.error(error.message)
+                this.error(action, `Could not save action: ${error.message}`)
+                reject(error)
+              }
+            )
+          },
+          error => {
+            console.error(error.message)
+            this.error(action, `Could not get organization: ${error.message}`)
+            reject(error)
+          }
+        )
+    })
+  },
+
+  postRoundReview (round) {
+    console.log('--POST ROUND REVIEW ACTION--')
+    return new Promise((resolve, reject) => {
+      let action = new Action({ type: 'post_round_review' })
+      action.data = {
+        round: round
+      }
+      action.save().then(
+        action => {
+          sendMail(action, round.organization.email)
+          resolve(action)
+        },
+        error => {
+          console.error(error.message)
+          this.error(action, `Could not save action: ${error.message}`)
+          reject(error)
+        }
+      )
+    })
+  },
+
+  postRoundSend (round, organization) {
+    console.log('--POST ROUND SEND ACTION--')
+    return new Promise((resolve, reject) => {
+      let action = new Action({ type: 'post_round_send' })
+      action.data = {
+        round: JSON.parse(JSON.stringify(round)),
+        amount: round.statistics.donationAmount
+      }
+      action.data.round.organization = organization
+      /* Recycle donations
+      Round.find({ recycle: true, payout: { $ne: 100 }}).then(
+        rounds => {
+          let amounts = rounds.map(round => new Promise((resolve, reject) => {
+            let amount = round.statistics.donationAmount * 0.25
+            round.payout += 25
+            round.save().then(
+              round => {
+                resolve(amount)
+              }
+            )
+          }))
+          Promise.all(amounts).then(
+            amounts => {
+              let total = amounts.reduce((acc, val) => {
+                return acc + val
+              }, 0)
+              return Promise.resolve(total)
+            }
+          )
+        }
+      )
+      */
+      action.save().then(
+        action => {
+          sendMail(action)
+          resolve(action)
+        },
+        error => {
+          console.error(error.message)
+          this.error(action, `Could not save action: ${error.message}`)
+          reject(error)
+        }
+      )
     })
   },
 
@@ -369,8 +478,6 @@ const ActionHandler = {
                 organization.description = fields.organization.description
                 organization.image = fields.organization.image
                 organization.link = fields.organization.link
-                // Update comments
-                action.comments = fields.comments
                 organization.save().then(
                   organization => {
                     // Send confirmation to organization
@@ -383,8 +490,6 @@ const ActionHandler = {
                 )
                 break
               case 'rejected':
-                // Update comments
-                action.comments = fields.comments
                 organization.remove().then(
                   organization => {
                     // Send confirmation to organization
@@ -467,8 +572,6 @@ const ActionHandler = {
                 // Update moderated round fields
                 round.description = fields.round.description
                 round.image = fields.round.image
-                // Update comments
-                action.comments = fields.comments
                 Promise.all([
                   organization.save(),
                   round.save()
@@ -484,8 +587,6 @@ const ActionHandler = {
                 )
                 break
               case 'rejected':
-                // Update comments
-                action.comments = fields.comments
                 // Do nothing or Send new request with feedback
                 // ActionCreate.updateOrganization(organization, round, false)
                 // Send confirmation to organization
@@ -501,6 +602,148 @@ const ActionHandler = {
         },
         error => {
           reject(new Error('Could not fetch organization and/or round'))
+        }
+      )
+    })
+  },
+
+  post_round_check (action, fields) {
+    return new Promise((resolve, reject) => {
+      switch (action.status) {
+        case 'accepted':
+          // Next step
+          ActionCreate.postRoundReview(action.data.round).then(
+            result => {
+              resolve(action)
+            },
+            error => {
+              reject(new Error('Could not start post_rount_review action'))
+            }
+          )
+          break
+        case 'rejected':
+          // Inform organization
+          sendMail(action, action.data.round.organization.email)
+          // Recycle donations
+          Round.findOne({ _id: action.data.round._id }).then(
+            round => {
+              round.recycle = true
+              round.save().then(
+                round => {
+                  resolve(action)
+                }
+              )
+            }
+          )
+        default:
+          resolve(action)
+          break
+      }
+    })
+  },
+
+  post_round_review (action, fields) {
+    return new Promise((resolve, reject) => {
+      Promise.all([
+        Organization.findOne({ _id: action.data.round.organization._id }),
+        Round.findOne({ _id: action.data.round._id })
+      ]).then(
+        results => {
+          let [ organization, round ] = results
+          if (organization) {
+            switch (action.status) {
+              case 'accepted':
+                // Update moderated fields
+                organization.account = fields.round.organization.account
+                organization.save().then(
+                  organization => {
+                    // Send confirmation to organization
+                    // Next action
+                    ActionCreate.postRoundSend(round, organization).then(
+                      result => {
+                        resolve(action)
+                      },
+                      error => {
+                        reject(new Error('Could not start post_rount_send action'))
+                      }
+                    )
+                  },
+                  error => {
+                    reject(new Error('Could not update organization'))
+                  }
+                )
+                break
+              case 'rejected':
+                // Inform lumenaid
+                sendMail(action)
+                // Recycle donations
+                Round.findOne({ _id: action.data.round._id }).then(
+                  round => {
+                    round.recycle = true
+                    round.save().then(
+                      round => {
+                        resolve(action)
+                      }
+                    )
+                  }
+                )
+              default:
+                resolve(action)
+                break
+            }
+          } else {
+            reject(new Error('Organization not found'))
+          }
+        },
+        error => {
+          reject(new Error('Could not fetch organization'))
+        }
+      )
+    })
+  },
+
+  post_round_send (action, fields) {
+    return new Promise((resolve, reject) => {
+      Round.findOne({ _id: action.data.round._id }).then(
+        round => {
+          if (round) {
+            switch (action.status) {
+              case 'accepted':
+                round.payout = 100
+                round.save().then(
+                  round => {
+                    sendMail(action, action.data.round.organization.email)
+                    resolve(action)
+                  },
+                  error => {
+                    reject(new Error('Could not save round'))
+                  }
+                )
+                break
+              case 'rejected':
+                // Inform organization
+                sendMail(action, action.data.round.organization.email)
+                // Recycle donations
+                Round.findOne({ _id: action.data.round._id }).then(
+                  round => {
+                    round.recycle = true
+                    round.save().then(
+                      round => {
+                        resolve(action)
+                      }
+                    )
+                  }
+                )
+              default:
+                resolve(action)
+                break
+            }
+          } else {
+            reject(new Error('Round not found'))
+          }
+        },
+        error => {
+          reject(new Error('Could not fetch round'))
         }
       )
     })

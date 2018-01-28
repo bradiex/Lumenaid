@@ -83,6 +83,90 @@ const MailTemplates = {
     return this.main(subject, content)
   },
 
+  post_round_check (action) {
+    let subject = ''
+    let content = ''
+    if (action.done) {
+      // Mail to organization
+      if (action.status === 'accepted') {
+        subject = `Lumenaid: Round payout accepted ${action.data.round.organization.name}`
+        content = `
+          The round payout for your account has been accepted <b>${action.data.round.organization.account}</b>.<br>
+          ${action.comments}
+        `
+      } else if (action.status === 'rejected') {
+        subject = `Lumenaid: Donation send rejected ${action.data.round.organization.name}`
+        content = `
+          Round payout has been denied for the following reason:<br>
+          ${action.comments}<br>
+          Donations will be recycled for next rounds.
+        `
+      }
+    } else {
+      // Mail to lumenaid
+      subject = `Lumenaid: Post round check`
+      content = `
+        Round check for <b>${action.data.round.organization.name}</b>:<br>
+        ${action.getLink()}
+      `
+    }
+    return this.main(subject, content)
+  },
+
+  post_round_review (action) {
+    let subject = ''
+    let content = ''
+    if (action.done) {
+      // Mail to lumenaid
+      subject = `Lumenaid: Round payout ${action.status} ${action.data.round.organization.name}`
+      content = `
+        Round payout has been ${action.status} by ${action.data.round.organization.name} for the following reason:<br>
+        ${action.comments}
+      `
+    } else {
+      // Mail to organization
+      subject = `Lumenaid: Round review`
+      content = `
+        The donation round for your organization <b>${action.data.round.organization.name}</b> has ended<br>
+        and has gathered a total of <b>${action.data.round.statistics.donationAmount} XLM</b> from ${action.data.round.statistics.donationCount} donations.<br>
+        The donations will be sent to your account <b>${action.data.round.organization.account}</b>.<br>
+        Please verify if this information is still correct with the following link:<br>
+        ${action.getLink()}
+      `
+    }
+    return this.main(subject, content)
+  },
+
+  post_round_send (action) {
+    let subject = ''
+    let content = ''
+    if (action.done) {
+      // Mail to organization
+      if (action.status === 'accepted') {
+        subject = `Lumenaid: Donations send ${action.data.round.organization.name}`
+        content = `
+          The donations have been send to your account <b>${action.data.round.organization.account}</b>.<br>
+          ${action.comments}
+        `
+      } else if (action.status === 'rejected') {
+        subject = `Lumenaid: Donation send rejected ${action.data.round.organization.name}`
+        content = `
+          Round payout has been denied for the following reason:<br>
+          ${action.comments}<br>
+          Donations will be recycled for next rounds.
+        `
+      }
+    } else {
+      // Mail to lumenaid
+      subject = `Lumenaid: Donation send request for ${action.data.round.organization.name}`
+      content = `
+        Donation send request for <b>${action.data.round.organization.name}</b>:<br>
+        ${action.getLink()}
+      `
+    }
+    return this.main(subject, content)
+  },
+
   update_organization (action) {
     let subject = ''
     let content = ''

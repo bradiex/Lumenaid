@@ -157,7 +157,124 @@
 
           </template>
 
+          <template v-if="action.type === 'post_round_check'">
+
+            <h5>Organization</h5>
+
+            <q-field label="Name">
+              <span>{{ action.data.round.organization.name }}</span>
+            </q-field>
+
+            <q-field label="Description">
+              <p class="caption" v-html="action.data.round.organization.description"></p>
+            </q-field>
+
+            <q-field label="Image">
+              <img :src="action.data.round.organization.image" style="width: 50%;"/>
+            </q-field>
+
+            <q-field label="Link">
+              <span>{{ action.data.round.organization.link }}</span>
+            </q-field>
+
+            <q-field label="Email">
+              <span>{{ action.data.round.organization.email }}</span>
+            </q-field>
+
+            <q-field label="Account">
+               <span>{{ action.data.round.organization.account }}</span>
+            </q-field>
+
+            <h5>Round Info</h5>
+
+            <q-field label="Description">
+              <p class="caption" v-html="action.data.round.description"></p>
+            </q-field>
+
+            <q-field label="Image">
+              <img :src="action.data.round.image" style="width: 50%;"/>
+            </q-field>
+
+            <h5>Statistics</h5>
+
+            <q-field label="Donations">
+              <span>{{ action.data.round.statistics.donationCount }}</span>
+            </q-field>
+
+            <q-field label="Amount">
+              <span>{{ action.data.round.statistics.donationAmount }}</span>
+            </q-field>
+
+            <q-field label="Votes">
+              <div v-for="vote in action.data.round.statistics.votes">
+                <span>{{ vote.count }}: {{ vote.organizationId }}</span>
+              </div>
+            </q-field>
+
+            <q-field label="Feedback">
+              <q-input v-model="action.comments"/>
+            </q-field>
+
+          </template>
+
+          <template v-if="action.type === 'post_round_review'">
+
+              <h5>Organization</h5>
+
+              <q-field label="Name">
+                <span>{{ action.data.round.organization.name }}</span>
+              </q-field>
+
+              <q-field label="Account">
+                <q-input v-model="action.data.round.organization.account"/>
+              </q-field>
+
+              <h5>Statistics</h5>
+
+              <q-field label="Donations">
+                <span>{{ action.data.round.statistics.donationCount }}</span>
+              </q-field>
+
+              <q-field label="Amount">
+                <span>{{ action.data.round.statistics.donationAmount }}</span>
+              </q-field>
+
+              <q-field label="Feedback" helper="Provide any additional requests here">
+                <q-input v-model="action.comments"/>
+              </q-field>
+
+            </template>
+
+            <template v-if="action.type === 'post_round_send'">
+
+              <h5>Organization</h5>
+
+              <q-field label="Name">
+                <span>{{ action.data.round.organization.name }}</span>
+              </q-field>
+
+              <q-field label="Account">
+                <q-input v-model="action.data.round.organization.account"/>
+              </q-field>
+
+              <h5>Statistics</h5>
+
+              <q-field label="Donations">
+                <span>{{ action.data.round.statistics.donationCount }}</span>
+              </q-field>
+
+              <q-field label="Amount">
+                <span>{{ action.data.round.statistics.donationAmount }}</span>
+              </q-field>
+
+              <q-field label="Feedback">
+                <q-input v-model="action.comments"/>
+              </q-field>
+
+            </template>
+
         </q-card-main>
+
         <q-card-actions v-if="action.status === 'pending' || action.status === 'ignored'">
           <q-btn flat color="positive" icon="done" @click="updateAction('accepted')">Accept</q-btn>
           <q-btn flat color="negative" icon="clear" @click="updateAction('rejected')">Reject</q-btn>
@@ -210,6 +327,12 @@ export default {
           return 'Organization Authorization'
         case 'update_organization':
           return 'Organization Info Update'
+        case 'post_round_check':
+          return 'Post round check'
+        case 'post_round_review':
+          return 'Post round review'
+        case 'post_round_send':
+          return 'Post round send'
         default:
           return ''
       }

@@ -60,6 +60,7 @@ router.patch('/:actionId', (req, res, next) => {
           next(error)
         } else {
           action.status = status
+          action.comments = fields.comments
           action.done = true
           ActionHandler.handle(action, fields).then(
             action => {
