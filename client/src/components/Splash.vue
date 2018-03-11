@@ -1,19 +1,21 @@
 <template>
 
-  <q-modal ref="modal">
-    <div class="layout-padding">
-      <h4>Welcom to Lumenaid!</h4>
+  <q-modal ref="modal" :content-css="{minWidth: '100vw', minHeight: '100vh'}">
+    <div class="layout-padding" style="background: rgb(51, 51, 60); height: 100vh; text-align: center; overflow: auto;">
 
-      <p class="caption">
-        Please be aware that this platform is still in development and that all payments run on Stellar's test network!<br>
-        <br>
-        You can test this platform by sending lumens to the donation address listed on the left.<br>
-        If you want to attach a message to your donation or if you want to add a vote, please use the form on the left.<br>
-        After submitting you will receive a memo id that you need to attach to your transaction.<br>
-        It is also possible to test this by clicking on 'SEND WITH TEST ACCOUNT' where a transaction will be send from a test account on the server.
+      <img :src="logos[logo]" style="height: 55vh;" @click="toggleLogo"/>
+
+      <p class="caption" style="color: #b8bbdb; margin: 60px 0px;">
+        Lumenaid is a Stellar donation platform with the objective to bring attention to lesser-known charity organizations.<br>
+        Every week a new organization is chosen and their work is put in the spotlight.<br>
       </p>
 
-      <q-btn color="primary" @click="$refs.modal.close()">Ok</q-btn>
+      <p class="caption text-yellow-3" style="margin: 20px 0px; font-style: italic;">
+        This platform is in alpha stage and is running on Stellar's test network!<br>
+      </p>
+
+      <q-btn flat color="primary" @click="$refs.modal.close()" icon-right="keyboard return">Continue</q-btn>
+
     </div>
 
   </q-modal>
@@ -33,12 +35,21 @@ export default {
   },
 
   data () {
-    return {}
+    return {
+      logo: 0,
+      logos: [
+        '/statics/logos/logo_light.png',
+        '/statics/logos/logo_light_on.png'
+      ]
+    }
   },
 
   methods: {
     open () {
       this.$refs.modal.open()
+    },
+    toggleLogo () {
+      this.logo = (this.logo + 1) % this.logos.length
     }
   }
 }

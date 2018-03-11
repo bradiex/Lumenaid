@@ -1,3 +1,5 @@
+![Lumenaid Logo](https://lumenaid.org/statics/logos/logo2_dark.png "Lumenaid Logo")
+
 # Lumenaid - A Stellar Donation Platform
 
 Lumenaid is a Stellar Donation Platform where lumens (Stellar's native asset XML) to organizations that deserve to be in the spotlight. For every received donation a new star pops up on the web site.
