@@ -5,6 +5,18 @@
 
       <img :src="logos[logo]" style="height: 55vh;" @click="toggleLogo"/>
 
+      <!--<p class="caption" style="color: #b8bbdb; font-family: Merienda-Regular; font-style: italic;">
+        After wandering through space and stardust<br>
+        ... lost the ability ...<br>
+        Though ... once heard about a Stellar network powered by a new light force.<br>
+        It wasn't long before ... stumbled upon the earth<br>
+        and found that Lumens reenabled his strength<br>
+        to shine some light on those who need it.<br>
+        <br>
+        --
+      </p>
+      -->
+
       <p class="caption" style="color: #b8bbdb; margin: 60px 0px;">
         Lumenaid is a Stellar donation platform with the objective to bring attention to lesser-known charity organizations.<br>
         Every week a new organization is chosen and their work is put in the spotlight.<br>
@@ -56,4 +68,8 @@ export default {
 </script>
 
 <style>
+@font-face {
+  font-family: Merienda-Regular;
+  src: url('/statics/Merienda-Regular.ttf');
+}
 </style>
